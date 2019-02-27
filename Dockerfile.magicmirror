@@ -1,0 +1,27 @@
+# Copyright (c) {Iori, Cocoa} Oikawa @ Meowtain
+# Distributed under the terms of the Modified BSD License.
+
+FROM ubuntu:18.04
+
+LABEL maintainer="Cocoa Oikawa <0xbbc@0xbbc.com>"
+
+USER root
+
+# using tuna mirror
+RUN sed -i 's/cn.archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+RUN sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+
+# install necessary packages
+RUN apt-get update && \
+	apt-get install -y apt-transport-https ca-certificates curl \
+	software-properties-common wget vim nginx
+
+# copy all external files
+COPY overlay /
+
+# generate corresponding nginx conf files
+RUN cd / && python3 /generate-conf.py && chmod +x /start.sh
+
+STOPSIGNAL SIGTERM
+
+CMD ["bash", "-c", "/start.sh"]

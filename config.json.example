@@ -1,0 +1,16 @@
+{
+    "main_domain": "mirrors.cocoaneko.moe",
+    "mirrors":{
+        "ubuntu": {
+            "mirror_path": "/ubuntu/pool",
+            "mirror": "https://mirrors.tuna.tsinghua.edu.cn/ubuntu/",
+            "dns": "8.8.8.8"
+        },
+        "pypi": {
+            "mirror_path": "/packages",
+            "mirror": "https://pypi.tuna.tsinghua.edu.cn",
+            "ipv6": true,
+            "dns": "8.8.8.8"
+        }
+    }
+}
