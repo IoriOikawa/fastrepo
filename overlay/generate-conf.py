@@ -34,11 +34,7 @@ server {lb}
     access_log /srv/{site}/logs/access.log {site}-default;
     error_log /srv/{site}/logs/error.log;
 
-    location {mirror_path} {lb}
-        try_files $uri @mirror;
-        access_log /srv/{site}/logs/access.log {site}-local;
-    {rb}
-
+{mirror_config}
     location / {lb}
         proxy_next_upstream error timeout http_404;
         proxy_pass {mirror_scheme_domain}$request_uri;
@@ -57,6 +53,13 @@ server {lb}
         access_log /srv/{site}/logs/access.log {site}-remote;
     {rb}
 {rb}
+"""
+
+nginx_mirror_config_template = """    location {mirror_path} {lb}
+        try_files $uri @mirror;
+        access_log /srv/{site}/logs/access.log {site}-local;
+    {rb}
+
 """
 
 
@@ -114,18 +117,36 @@ class NginxConfGenerator(object):
         mirrors = self.config.get('mirrors', None)
         if type(mirrors) != dict:
             raise RuntimeError("[ERROR] {} does NOT conform to the required format!".format(json_config))
-        start_sh = open('/start.sh', 'w')
-        start_sh.write('#!/bin/sh\n\n')
-        start_sh.write('rm /etc/nginx/sites-enabled/default\n')
+#        start_sh = open('/start.sh', 'w')
+#        start_sh.write('#!/bin/sh\n\n')
+#        start_sh.write('rm /etc/nginx/sites-enabled/default\n')
         for site, site_config in mirrors.items():
             NginxConfGenerator._check_site_config(site, site_config)
             with open('/etc/nginx/sites-enabled/{}'.format(site), 'w') as site_config_file:
+                nginx_mirror_configs = None
+                mirror_path = site_config['mirror_path']
+                if type(mirror_path) == str:
+                    nginx_mirror_configs = nginx_mirror_config_template.format(lb='{', rb='}', 
+                        mirror_path=mirror_path, 
+                        site=site)
+                elif type(mirror_path) == list:
+                    nginx_mirror_configs = []
+                    for path in mirror_path:
+                        if type(path) != str:
+                            raise RuntimeError("[ERROR] {} does NOT conform to the required format!".format(json_config))
+                        nginx_mirror_configs.append(nginx_mirror_config_template.format(lb='{', rb='}', 
+                            mirror_path=path,
+                            site=site))
+                    nginx_mirror_configs = "".join(nginx_mirror_configs)
+                else:
+                    raise RuntimeError("[ERROR] {} does NOT conform to the required format!".format(json_config))
+
                 site_config_file.write(nginx_conf_template.format(lb='{', rb='}',
                     site=site,
                     main_domain=main_domain,
                     ipv6=site_config['ipv6'],
                     dns=site_config['dns'],
-                    mirror_path=site_config['mirror_path'],
+                    mirror_config=nginx_mirror_configs,
                     mirror_domain=site_config['mirror_domain'],
                     mirror_scheme_domain=site_config['mirror_scheme_domain']
                 ))
